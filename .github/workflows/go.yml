@@ -26,8 +26,8 @@ jobs:
 
       - name: Login to Azure using Managed Identity (recommended)
         uses: azure/login@v1
-        with:
-          useDeviceAuth: true # Enables Managed Identity for Azure Resources
+        with: # Keep this for Managed Identity
+          useDeviceAuth: true # Only necessary for interactive logins
 
       - name: Upload Build Artifacts to Azure Storage (optional)
         uses: actions/upload-artifact@v2
@@ -35,7 +35,8 @@ jobs:
           name: ohmywall-backend-artifacts
           path: ./main
 
-      - name: Login to Azure using Azure Service Principal (recommended)
+      # Choose one of the following login options (not both)
+      - name: Login to Azure using Azure Service Principal (optional) # Choose this if not using Managed Identity
         uses: azure/login@v1
         with:
           client_id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -44,8 +45,8 @@ jobs:
       - name: Deploy to Azure VM using Azure Remote Commands (ARM)
         run: |
           az vm run-command invoke \
-            --resource-group go_server \
-            --name goserver \
+            --resource-group go_server  # Replace with your resource group name
+            --name goserver               # Replace with your VM name
             --command-id RunPowershellScript \
             --scripts | tee /dev/null
 
