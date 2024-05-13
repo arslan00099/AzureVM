@@ -35,6 +35,12 @@ jobs:
           name: ohmywall-backend-artifacts
           path: ./main
 
+      - name: Login to Azure using Azure Service Principal (recommended)
+        uses: azure/login@v1
+        with:
+          client_id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+
       - name: Deploy to Azure VM using Azure Remote Commands (ARM)
         run: |
           az vm run-command invoke \
