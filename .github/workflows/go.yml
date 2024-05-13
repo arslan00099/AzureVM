@@ -19,10 +19,14 @@ jobs:
           go-version: 1.13
 
       - name: Build
-        run: go build -o main
+        run: |
+          go build -o main
+          echo "Build completed successfully!"  # Debug message after build
 
       - name: Test
-        run: go test ./...
+        run: |
+          go test ./...
+          echo "Tests passed!"  # Debug message after tests
 
       - name: Login to Azure using Managed Identity (recommended)
         uses: azure/login@v1
@@ -44,11 +48,15 @@ jobs:
 
       - name: Deploy to Azure VM using Azure Remote Commands (ARM)
         run: |
+          echo "Starting Azure VM deployment..."  # Debug message before deployment
+
           az vm run-command invoke \
             --resource-group go_server  # Replace with your resource group name
             --name goserver               # Replace with your VM name
             --command-id RunPowershellScript \
             --scripts | tee /dev/null
+
+          echo "Deployment to Azure VM complete!"  # Debug message after deployment
 
           # Example PowerShell script for deployment within the VM (replace with your actual commands)
           Write-Host "Downloading build artifacts..."
