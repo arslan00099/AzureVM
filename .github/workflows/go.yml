@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,13 +24,37 @@ jobs:
       - name: Test
         run: go test ./...
 
-      - name: Deploy to Azure VM
+      - name: Login to Azure using Managed Identity (recommended)
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          useDeviceAuth: true # Enables Managed Identity for Azure Resources
 
-      - name: Copy files to VM
-        run: scp -r ./main azureuser@172.172.246.184:/home/azureuser/project
+      - name: Upload Build Artifacts to Azure Storage (optional)
+        uses: actions/upload-artifact@v2
+        with:
+          name: ohmywall-backend-artifacts
+          path: ./main
 
-      - name: Restart Backend Service
-        run: ssh azureuser@172.172.246.184 'sudo systemctl restart your-backend-service'
+      - name: Deploy to Azure VM using Azure Remote Commands (ARM)
+        run: |
+          az vm run-command invoke \
+            --resource-group go_server \
+            --name goserver \
+            --command-id RunPowershellScript \
+            --scripts | tee /dev/null
+
+          # Example PowerShell script for deployment within the VM (replace with your actual commands)
+          Write-Host "Downloading build artifacts..."
+          # Download artifacts from Azure Storage if uploaded (replace with download URI)
+          # Download-File https://your-storage-account.blob.core.windows.net/ohmywall-backend-artifacts/main -Destination /home/azureuser/project/main
+
+          Write-Host "Stopping your-backend-service..."
+          # Replace with the actual command to stop your service
+
+          Write-Host "Replacing application with new build..."
+          cp /path/to/downloaded/artifact /home/azureuser/project/main
+
+          Write-Host "Starting your-backend-service..."
+          # Replace with the actual command to start your service
+
+          Write-Host "Deployment complete!"
