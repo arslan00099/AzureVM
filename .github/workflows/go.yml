@@ -1,34 +1,52 @@
-name: "Azure VM Connection Test"
+name: CI/CD
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
-  test-connection:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository (Optional)
-        uses: actions/checkout@v2 # Only needed if script requires code from repository
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-      - name: Install 'azure/actions-github-script' action
-        uses: https://raw.githubusercontent.com/Azure/actions-github-script/v5/action.yml@v5 # Download and run the install script
-
-      - name: Install 'azure/ssh' action (if using v4 or below)
-        # Only needed if runner version doesn't have pre-installed azure/ssh action (v5+)
-        uses: https://raw.githubusercontent.com/azure/actions/v1/action.yml@v1 # Download and run the install script for azure/ssh
-
-      - name: Test Azure VM Connection
-        # Use the installed actions after this point
-        uses: azure/ssh@v1 # Assuming runner v5+ has this pre-installed, if not, use the installed version from previous step
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v2
         with:
-          host: "172.172.246.184" # Your VM IP address
-          username: "azureuser" # Your VM username
-          fail_on_ssh_error: true # Fail workflow if SSH fails
+          node-version: "14"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Copy files via ssh
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "."
+          target: "/home/azureuser/nodeproject/server"
+
+      - name: Execute commands on the server
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "Connected to Azure VM successfully!"
-        env:
-          # Provide Azure SSH key securely (refer to documentation)
-          AZURE_SSH_KEY: ${{ secrets.AZURE_SSH_KEY }}
+            cd /home/azureuser/nodeproject/server
+            npm install
+            npm run start
