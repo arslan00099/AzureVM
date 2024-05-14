@@ -1,36 +1,50 @@
-env:
-  OUTPUT_PATH: ${{ github.workspace }}
-  GOLANG_CODE_PATH: /path/to/your/golang/code/directory
+name: Ohmywall_Backend
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 jobs:
-  # Upload Golang code to VM
-  UploadCode:
-    runs-on: ubuntu-latest # Use Ubuntu for SCP transfer
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code from repo
-        uses: actions/checkout@v1
-
-      - name: Install SSH dependencies
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+        # Debug: Verify repository checkout
         run: |
-          sudo apt update
-          sudo apt install openssh-client
+          echo "Successfully checked out repository!"
 
-      - name: Get VM details from workflow (optional)
-        # Assuming VM details are stored in secrets or environment variables
-        # Replace with actual variable names if applicable
-        env:
-          VM_IP_ADDRESS: ${{ secrets.VM_IP_ADDRESS }}
-          VM_USERNAME: ${{ secrets.VM_USERNAME }}
-        # Comment out the below step if using hardcoded values
-        # run: echo "VM_IP_ADDRESS=${{ secrets.VM_IP_ADDRESS }}, VM_USERNAME=${{ secrets.VM_USERNAME }}"
-
-      - name: Upload Golang code to VM
-        # Replace with retrieved or hardcoded VM details
-        env:
-          VM_IP_ADDRESS: your_vm_ip_address # Replace with actual IP if not retrieved
-          VM_USERNAME: your_vm_username # Replace with actual username if not retrieved
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.13
+        # Debug: Verify Go version setup
         run: |
-          scp -r ${{ env.OUTPUT_PATH }}/${{ env.GOLANG_CODE_PATH }} ${VM_USERNAME}@${VM_IP_ADDRESS}:/home/azureuser/project/main
+          echo "Go version $(go version) is set up."
+
+      - name: Build
+        run: |
+          go build -o main
+          echo "Build completed successfully!"
+        # Debug: Capture specific build output (optional)
+        # run: |
+        #   go build -o main 2>&1 | tee build_output.log
+
+      - name: Test
+        run: |
+          go test ./...
+          echo "Tests passed!"
+        # Debug: Capture specific test output (optional)
+        # run: |
+        #   go test ./... -v 2>&1 | tee test_output.log
+
+      - name: Upload Build Artifact to Azure VM using OpenSSH
+        run: |
+          echo "Connecting to Azure VM..."
+          scp -o StrictHostKeyChecking=no ./main azureuser@<your_vm_ip_address>:/path/to/destination/directory/on/VM
+          echo "Upload to VM complete!"
+
+          # (Optional) Additional security measure: Remove the known_hosts entry after upload
+          ssh-keygen -R <your_vm_ip_address>
