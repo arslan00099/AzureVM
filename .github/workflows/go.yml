@@ -13,8 +13,11 @@ jobs:
       - name: Checkout Repository (Optional)
         uses: actions/checkout@v2 # Only needed if script requires code from repository
 
+      - name: Install azure/ssh action
+        uses: azure/actions-github-script@v5 # Installs the required action
+
       - name: Test Azure VM Connection
-        uses: azure/ssh@v1
+        uses: azure/ssh@v1 # Use the installed action
         with:
           host: "172.172.246.184" # Your VM IP address
           username: "azureuser" # Your VM username
