@@ -1,75 +1,36 @@
-name: "Ohmywall_Backend"
+env:
+  OUTPUT_PATH: ${{ github.workspace }}
+  GOLANG_CODE_PATH: /path/to/your/golang/code/directory
 
-on:
-  push:
-    branches:
-      - main
+on: [push]
 
 jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
+  # Upload Golang code to VM
+  UploadCode:
+    runs-on: ubuntu-latest # Use Ubuntu for SCP transfer
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout code from repo
+        uses: actions/checkout@v1
 
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.13
-
-      - name: Build
+      - name: Install SSH dependencies
         run: |
-          go build -o main
-          echo "Build completed successfully!"  # Debug message after build
+          sudo apt update
+          sudo apt install openssh-client
 
-      - name: Test
+      - name: Get VM details from workflow (optional)
+        # Assuming VM details are stored in secrets or environment variables
+        # Replace with actual variable names if applicable
+        env:
+          VM_IP_ADDRESS: ${{ secrets.VM_IP_ADDRESS }}
+          VM_USERNAME: ${{ secrets.VM_USERNAME }}
+        # Comment out the below step if using hardcoded values
+        # run: echo "VM_IP_ADDRESS=${{ secrets.VM_IP_ADDRESS }}, VM_USERNAME=${{ secrets.VM_USERNAME }}"
+
+      - name: Upload Golang code to VM
+        # Replace with retrieved or hardcoded VM details
+        env:
+          VM_IP_ADDRESS: your_vm_ip_address # Replace with actual IP if not retrieved
+          VM_USERNAME: your_vm_username # Replace with actual username if not retrieved
         run: |
-          go test ./...
-          echo "Tests passed!"  # Debug message after tests
-
-      - name: Login to Azure using Managed Identity (recommended)
-        uses: azure/login@v1
-        with: # Keep this for Managed Identity
-          useDeviceAuth: true # Only necessary for interactive logins
-
-      - name: Upload Build Artifacts to Azure Storage (optional)
-        uses: actions/upload-artifact@v2
-        with:
-          name: ohmywall-backend-artifacts
-          path: ./main
-
-      # Choose one of the following login options (not both)
-      - name: Login to Azure using Azure Service Principal (optional) # Choose this if not using Managed Identity
-        uses: azure/login@v1
-        with:
-          client_id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant_id: ${{ secrets.AZURE_TENANT_ID }}
-
-      - name: Deploy to Azure VM using Azure Remote Commands (ARM)
-        run: |
-          echo "Starting Azure VM deployment..."  # Debug message before deployment
-
-          az vm run-command invoke \
-            --resource-group go_server  # Replace with your resource group name
-            --name goserver               # Replace with your VM name
-            --command-id RunPowershellScript \
-            --scripts | tee /dev/null
-
-          echo "Deployment to Azure VM complete!"  # Debug message after deployment
-
-          # Example PowerShell script for deployment within the VM (replace with your actual commands)
-          Write-Host "Downloading build artifacts..."
-          # Download artifacts from Azure Storage if uploaded (replace with download URI)
-          # Download-File https://your-storage-account.blob.core.windows.net/ohmywall-backend-artifacts/main -Destination /home/azureuser/project/main
-
-          Write-Host "Stopping your-backend-service..."
-          # Replace with the actual command to stop your service
-
-          Write-Host "Replacing application with new build..."
-          cp /path/to/downloaded/artifact /home/azureuser/project/main
-
-          Write-Host "Starting your-backend-service..."
-          # Replace with the actual command to start your service
-
-          Write-Host "Deployment complete!"
+          scp -r ${{ env.OUTPUT_PATH }}/${{ env.GOLANG_CODE_PATH }} ${VM_USERNAME}@${VM_IP_ADDRESS}:/home/azureuser/project/main
