@@ -13,11 +13,16 @@ jobs:
       - name: Checkout Repository (Optional)
         uses: actions/checkout@v2 # Only needed if script requires code from repository
 
-      - name: Install azure/ssh action
-        uses: azure/actions-github-script@v5 # Installs the required action
+      - name: Install 'azure/actions-github-script' action
+        uses: https://raw.githubusercontent.com/Azure/actions-github-script/v5/action.yml@v5 # Download and run the install script
+
+      - name: Install 'azure/ssh' action (if using v4 or below)
+        # Only needed if runner version doesn't have pre-installed azure/ssh action (v5+)
+        uses: https://raw.githubusercontent.com/azure/actions/v1/action.yml@v1 # Download and run the install script for azure/ssh
 
       - name: Test Azure VM Connection
-        uses: azure/ssh@v1 # Use the installed action
+        # Use the installed actions after this point
+        uses: azure/ssh@v1 # Assuming runner v5+ has this pre-installed, if not, use the installed version from previous step
         with:
           host: "172.172.246.184" # Your VM IP address
           username: "azureuser" # Your VM username
