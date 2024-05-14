@@ -23,12 +23,19 @@ jobs:
           go build -o main
           echo "Build completed successfully!"  # Debug message after build
 
-      - name: Test
+     - name: Test
         run: |
           go test ./...
-          echo "Tests passed!"  # Debug message after tests
+          echo "Tests passed!"
+        # Debug: Capture specific test output (optional)
+        # run: |
+        #   go test ./... -v 2>&1 | tee test_output.log
 
-      - name: Login to Azure using Managed Identity (recommended)
-        uses: azure/login@v1
-        with: # Keep this for Managed Identity
-          useDeviceAuth: true # Only necessary for interactive logins
+      - name: Upload Build Artifact to Azure VM using OpenSSH
+        run: |
+          echo "Connecting to Azure VM..."
+          scp -o StrictHostKeyChecking=no ./main azureuser@172.172.246.184:/home/azureuser/project/main
+          echo "Upload to VM complete!"
+
+          # (Optional) Additional security measure: Remove the known_hosts entry after upload
+          ssh-keygen -R 172.172.246.184
