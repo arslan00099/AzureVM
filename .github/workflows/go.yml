@@ -1,4 +1,4 @@
-name: "Ohmywall_Backend"
+name: "Azure VM Connection Test"
 
 on:
   push:
@@ -6,36 +6,21 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  test-connection:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - name: Checkout Repository (Optional)
+        uses: actions/checkout@v2 # Only needed if script requires code from repository
 
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - name: Test Azure VM Connection
+        uses: azure/ssh@v1
         with:
-          go-version: 1.13
-
-      - name: Build
-        run: |
-          go build -o main
-          echo "Build completed successfully!"  # Debug message after build
-
-     - name: Test
-        run: |
-          go test ./...
-          echo "Tests passed!"
-        # Debug: Capture specific test output (optional)
-        # run: |
-        #   go test ./... -v 2>&1 | tee test_output.log
-
-      - name: Upload Build Artifact to Azure VM using OpenSSH
-        run: |
-          echo "Connecting to Azure VM..."
-          scp -o StrictHostKeyChecking=no ./main azureuser@172.172.246.184:/home/azureuser/project/main
-          echo "Upload to VM complete!"
-
-          # (Optional) Additional security measure: Remove the known_hosts entry after upload
-          ssh-keygen -R 172.172.246.184
+          host: "172.172.246.184" # Your VM IP address
+          username: "azureuser" # Your VM username
+          fail_on_ssh_error: true # Fail workflow if SSH fails
+          script: |
+            echo "Connected to Azure VM successfully!"
+        env:
+          # Provide Azure SSH key securely (refer to documentation)
+          AZURE_SSH_KEY: ${{ secrets.AZURE_SSH_KEY }}
