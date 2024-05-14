@@ -5,34 +5,45 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14, 16] # Test with multiple Node.js versions
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Setup Node.js environment
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v2
         with:
-          node-version: "14"
+          node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
+      - name: Run tests
+        run: npm test
+
+      - name: Check for Azure connection (informational)
+        run: |
+          echo "** Checking for Azure connection (informational only) **"
+          # (Optional) Enumerate environment variables or Azure CLI commands
+          # to provide more details about a potential Azure connection
+          echo "  - Environment variables (for informational purposes only):"
+          env | grep -E '^AZURE|^ARM_'  # Filter for potential Azure-related variables
+          echo "  - Azure CLI availability (if installed):"
+          az --version  # Check for Azure CLI if available (informational only)
 
   deploy:
-    needs: build
+    needs: build-and-test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Copy files via ssh
-        uses: appleboy/scp-action@master
+      - name: Copy files via SSH
+        uses: appleboy/scp-action@master # Consider security implications of using secrets
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
@@ -41,7 +52,7 @@ jobs:
           target: "/home/azureuser/nodeproject/server"
 
       - name: Execute commands on the server
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@master # Consider security implications of using secrets
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
